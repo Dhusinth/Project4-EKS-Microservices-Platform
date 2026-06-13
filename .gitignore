@@ -1,0 +1,80 @@
+# =========================
+# Terraform
+# =========================
+.terraform/
+*.tfstate
+*.tfstate.*
+crash.log
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+
+# =========================
+# Python
+# =========================
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.sqlite3
+.pytest_cache/
+
+# Virtual Environments
+venv/
+.venv/
+env/
+
+# Environment Variables
+.env
+.env.*
+
+# =========================
+# IDE / Editors
+# =========================
+.vscode/
+.idea/
+
+# =========================
+# macOS
+# =========================
+.DS_Store
+
+# =========================
+# Linux / Vim
+# =========================
+*.swp
+*.swo
+
+# =========================
+# Logs
+# =========================
+*.log
+
+# =========================
+# Docker
+# =========================
+*.tar
+
+# =========================
+# Kubernetes Secrets
+# =========================
+secret.yaml
+secrets.yaml
+
+# =========================
+# AWS Credentials
+# =========================
+.aws/
+
+# =========================
+# Jenkins
+# =========================
+.jenkins/
+
+# =========================
+# Build Artifacts
+# =========================
+dist/
+build/
+target/

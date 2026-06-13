@@ -1,0 +1,152 @@
+pipeline {
+    agent any
+
+    options {
+        timestamps()
+    }
+
+    environment {
+        DOCKERHUB_USERNAME = "dhusinth123"
+        AWS_REGION = "ap-south-1"
+        EKS_CLUSTER_NAME = "project4-eks"
+        K8S_NAMESPACE = "project4"
+    }
+    
+    stages {
+        stage('Checkout') {
+            steps {
+                git branch: 'main',
+                    url: 'https://github.com/Dhusinth/Project4-EKS-Microservices-Platform.git'
+            }
+        }
+        stage('Verify Tools') {
+            steps {
+                sh """
+                docker --version
+                aws --version
+                kubectl version --client
+                """
+            }
+        }
+
+        stage('Build User Service') {
+            steps {
+                sh """
+                docker build -t ${DOCKERHUB_USERNAME}/user-service:${BUILD_NUMBER} ./user-service
+                """
+            }
+        }
+
+        stage('Build Product Service') {
+            steps {
+                sh """
+                docker build -t ${DOCKERHUB_USERNAME}/product-service:${BUILD_NUMBER} ./product-service
+                """
+            }
+        }
+
+        stage('Build Order Service') {
+            steps {
+                sh """
+                docker build -t ${DOCKERHUB_USERNAME}/order-service:${BUILD_NUMBER} ./order-service
+                """
+            }
+        }
+
+        stage('Docker Login') {
+            steps {
+                withCredentials([
+                    usernamePassword(
+                        credentialsId: 'my-login-creds',
+                        usernameVariable: 'DOCKER_USERNAME',
+                        passwordVariable: 'DOCKERHUB_PASSWORD'
+                    )
+                ]) {
+                    sh """
+                    echo \$DOCKERHUB_PASSWORD | docker login -u \$DOCKER_USERNAME --password-stdin
+                    """
+                }
+            }
+        }
+
+        stage('Push User Service') {
+            steps {
+                sh """
+                docker push ${DOCKERHUB_USERNAME}/user-service:${BUILD_NUMBER}
+                """
+            }
+        }
+
+        stage('Push Product Service') {
+            steps {
+                sh """
+                docker push ${DOCKERHUB_USERNAME}/product-service:${BUILD_NUMBER}
+                """
+            }
+        }
+
+        stage('Push Order Service') {
+            steps {
+                sh """
+                docker push ${DOCKERHUB_USERNAME}/order-service:${BUILD_NUMBER}
+                """
+            }
+        }
+
+        stage('Configure EKS Access') {
+            steps {
+                sh """
+                aws eks update-kubeconfig \
+                --region ${AWS_REGION} \
+                --name ${EKS_CLUSTER_NAME}
+                kubectl get nodes
+                kubectl get ns
+                """
+            }
+        }
+
+        stage('Deploy') {
+            steps {
+                sh """
+                kubectl set image deployment/user-service \
+                user-service=${DOCKERHUB_USERNAME}/user-service:${BUILD_NUMBER} \
+                -n ${K8S_NAMESPACE}
+                kubectl set image deployment/product-service \
+                product-service=${DOCKERHUB_USERNAME}/product-service:${BUILD_NUMBER} \
+                -n ${K8S_NAMESPACE}
+                kubectl set image deployment/order-service \
+                order-service=${DOCKERHUB_USERNAME}/order-service:${BUILD_NUMBER} \
+                -n ${K8S_NAMESPACE}
+                """
+            }
+        }
+
+        stage('Verify Rollout') {
+            steps {
+                sh """
+                kubectl rollout status deployment/user-service \
+                -n ${K8S_NAMESPACE} \
+                --timeout=5m
+                kubectl rollout status deployment/product-service \
+                -n ${K8S_NAMESPACE} \
+                --timeout=5m
+                kubectl rollout status deployment/order-service \
+                -n ${K8S_NAMESPACE} \
+                --timeout=5m
+                """
+            }
+        }
+    }
+    post {
+        success {
+            echo 'Deployment Successful'
+        }
+        failure {
+            echo 'Deployment Failed'
+        }
+        always {
+            cleanWs()
+        }
+    }
+
+}
