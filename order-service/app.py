@@ -1,42 +1,24 @@
 from flask import Flask, jsonify
+import requests
 
 app = Flask(__name__)
 
-orders = [
-    {
-        "id": 1,
-        "user_id": 1,
-        "product_id": 1,
-        "quantity": 2
-    },
-    {
-        "id": 2,
-        "user_id": 2,
-        "product_id": 2,
-        "quantity": 1
-    }
-]
+@app.route("/orders")
+def orders():
 
+    product = requests.get(
+        "http://product-service/products"
+    ).json()
+
+    return jsonify({
+        "service": "order-service",
+        "order_id": 1001,
+        "product": product
+    })
 
 @app.route("/health")
 def health():
-    return jsonify({"status": "healthy"})
-
-
-@app.route("/orders")
-def get_orders():
-    return jsonify(orders)
-
-
-@app.route("/orders/<int:order_id>")
-def get_order(order_id):
-    order = next((o for o in orders if o["id"] == order_id), None)
-
-    if order:
-        return jsonify(order)
-
-    return jsonify({"error": "Order not found"}), 404
-
+    return {"status": "healthy"}
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000)
